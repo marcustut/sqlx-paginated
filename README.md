@@ -103,7 +103,6 @@ Note: This documentation covers PostgreSQL features only, as it's currently the 
 
 ### Unique Selling Points
 
-
 1. **Quick Web Framework Integration**
 ```rust
 // Actix Web example
@@ -124,6 +123,9 @@ let params = QueryParamsBuilder::<User>::new()
     .with_search("john", vec!["name", "email"])
     .build();
 ```
+
+3.  **Advanced Builder Patterns
+4. 
 
 ### Target Audience
 1. **Primary users**
@@ -356,7 +358,7 @@ pub async fn paginated_query_builder_advanced_example(
         .with_date_range(Some(Utc::now()), None, None::<String>)
         .with_filter("status", Some("active"))
         .with_filters(some_extra_filters)
-        .with_sort("created_at", SortDirection::Descending)
+        .with_sort("created_at", QuerySortDirection::Descending)
         .build();
 
     paginated_query_as!(UserExample, "SELECT * FROM users")

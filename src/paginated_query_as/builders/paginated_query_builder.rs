@@ -1,5 +1,6 @@
 use crate::paginated_query_as::examples::build_query_with_safe_defaults;
-use crate::paginated_query_as::internal::{quote_identifier, SortDirection};
+use crate::paginated_query_as::internal::quote_identifier;
+use crate::paginated_query_as::models::QuerySortDirection;
 use crate::{FlatQueryParams, PaginatedResponse, QueryParams};
 use serde::Serialize;
 use sqlx::postgres::PgArguments;
@@ -17,12 +18,7 @@ where
 
 impl<'q, T, A> PaginatedQueryBuilder<'q, T, A>
 where
-    T: for<'r> FromRow<'r, <Postgres as sqlx::Database>::Row>
-        + Send
-        + Unpin
-        + Serialize
-        + Default
-        + 'static,
+    T: for<'r> FromRow<'r, <Postgres as sqlx::Database>::Row> + Send + Unpin + Serialize + Default,
     A: 'q + IntoArguments<'q, Postgres> + Send,
 {
     pub fn new(query: QueryAs<'q, Postgres, T, A>) -> Self {
@@ -84,7 +80,6 @@ where
             (None, None)
         };
 
-        // Execute main query
         let mut main_sql = format!("{} SELECT * FROM base_query{}", base_sql, where_clause);
         main_sql.push_str(&self.build_order_clause());
 
@@ -121,8 +116,8 @@ where
 
     fn build_order_clause(&self) -> String {
         let order = match self.params.sort.sort_direction {
-            SortDirection::Ascending => "ASC",
-            SortDirection::Descending => "DESC",
+            QuerySortDirection::Ascending => "ASC",
+            QuerySortDirection::Descending => "DESC",
         };
         format!(
             " ORDER BY {} {}",

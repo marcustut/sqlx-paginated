@@ -4,6 +4,7 @@ use crate::paginated_query_as::internal::{
     deserialize_search, deserialize_search_columns,
 };
 
+use crate::QuerySortDirection;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -34,7 +35,7 @@ pub struct QuerySortParams {
     #[serde(default = "default_sort_column")]
     pub sort_column: String,
     #[serde(default = "default_sort_direction")]
-    pub sort_direction: SortDirection,
+    pub sort_direction: QuerySortDirection,
 }
 
 impl Default for QuerySortParams {
@@ -65,12 +66,4 @@ pub struct QueryDateRangeParams {
     pub date_column: Option<String>,
     pub date_after: Option<DateTime<Utc>>,
     pub date_before: Option<DateTime<Utc>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum SortDirection {
-    Ascending,
-    #[default]
-    Descending,
 }

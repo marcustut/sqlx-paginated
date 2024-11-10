@@ -1,7 +1,8 @@
 use crate::paginated_query_as::internal::{
-    SortDirection, DEFAULT_DATE_RANGE_COLUMN_NAME, DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE,
+    DEFAULT_DATE_RANGE_COLUMN_NAME, DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE,
     DEFAULT_SEARCH_COLUMN_NAMES, DEFAULT_SORT_COLUMN_NAME,
 };
+use crate::QuerySortDirection;
 use serde::Serialize;
 use serde_json::Value;
 use sqlx::types::chrono::{DateTime, Utc};
@@ -28,8 +29,8 @@ pub fn default_sort_column() -> String {
     DEFAULT_SORT_COLUMN_NAME.to_string()
 }
 
-pub fn default_sort_direction() -> SortDirection {
-    SortDirection::Descending
+pub fn default_sort_direction() -> QuerySortDirection {
+    QuerySortDirection::Descending
 }
 
 pub fn default_date_range_column() -> Option<String> {
@@ -97,7 +98,8 @@ pub fn extract_digits_from_strings(val: impl Into<String>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::paginated_query_as::internal::{SortDirection, DEFAULT_MIN_PAGE_SIZE};
+    use crate::paginated_query_as::internal::DEFAULT_MIN_PAGE_SIZE;
+    use crate::paginated_query_as::models::QuerySortDirection;
     use chrono::Utc;
     use serde::Serialize;
 
@@ -133,7 +135,7 @@ mod tests {
     fn test_default_sort_direction() {
         assert!(matches!(
             default_sort_direction(),
-            SortDirection::Descending
+            QuerySortDirection::Descending
         ));
     }
 

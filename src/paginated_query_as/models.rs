@@ -50,3 +50,11 @@ impl<'q, T> From<FlatQueryParams> for QueryParams<'q, T> {
         }
     }
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum QuerySortDirection {
+    Ascending,
+    #[default]
+    Descending,
+}

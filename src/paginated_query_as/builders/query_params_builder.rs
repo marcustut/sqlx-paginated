@@ -1,8 +1,9 @@
 use crate::paginated_query_as::internal::{
     get_struct_field_names, QueryDateRangeParams, QueryPaginationParams, QuerySearchParams,
-    QuerySortParams, SortDirection, DEFAULT_DATE_RANGE_COLUMN_NAME, DEFAULT_MAX_PAGE_SIZE,
-    DEFAULT_MIN_PAGE_SIZE, DEFAULT_PAGE,
+    QuerySortParams, DEFAULT_DATE_RANGE_COLUMN_NAME, DEFAULT_MAX_PAGE_SIZE, DEFAULT_MIN_PAGE_SIZE,
+    DEFAULT_PAGE,
 };
+use crate::paginated_query_as::models::QuerySortDirection;
 use crate::QueryParams;
 use chrono::{DateTime, Utc};
 use serde::Serialize;
@@ -19,12 +20,52 @@ impl<'q, T: Default + Serialize> Default for QueryParamsBuilder<'q, T> {
 }
 
 impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
+    /// Creates a new `QueryParamsBuilder` with default values.
+    ///
+    /// Default values include:
+    /// - Page: 1
+    /// - Page size: 10
+    /// - Sort column: "created_at"
+    /// - Sort direction: Descending
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::{Serialize};
+    /// use sqlx_paginated::{QueryParamsBuilder};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String
+    /// }
+    /// let builder = QueryParamsBuilder::<UserExample>::new();
+    /// ```
     pub fn new() -> Self {
         Self {
             query: QueryParams::default(),
         }
     }
 
+    /// Creates a new `QueryParamsBuilder` with default values.
+    ///
+    /// Default values include:
+    /// - Page: 1
+    /// - Page size: 10
+    /// - Sort column: "created_at"
+    /// - Sort direction: Descending
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::{Serialize};
+    /// use sqlx_paginated::{QueryParamsBuilder};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String
+    /// }
+    /// let builder = QueryParamsBuilder::<UserExample>::new();
+    /// ```
     pub fn with_pagination(mut self, page: i64, page_size: i64) -> Self {
         self.query.pagination = QueryPaginationParams {
             page: page.max(DEFAULT_PAGE),
@@ -33,10 +74,32 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
         self
     }
 
+    /// Sets sorting parameters.
+    ///
+    /// # Arguments
+    ///
+    /// * `sort_column` - Column name to sort by
+    /// * `sort_direction` - Direction of sort (Ascending or Descending)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::{Serialize};
+    /// use sqlx_paginated::{QueryParamsBuilder, QuerySortDirection};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String
+    /// }
+    ///
+    /// let params = QueryParamsBuilder::<UserExample>::new()
+    ///     .with_sort("updated_at", QuerySortDirection::Ascending)
+    ///     .build();
+    /// ```
     pub fn with_sort(
         mut self,
         sort_column: impl Into<String>,
-        sort_direction: SortDirection,
+        sort_direction: QuerySortDirection,
     ) -> Self {
         self.query.sort = QuerySortParams {
             sort_column: sort_column.into(),
@@ -45,6 +108,28 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
         self
     }
 
+    /// Sets search parameters with multiple columns support.
+    ///
+    /// # Arguments
+    ///
+    /// * `search` - Search term to look for
+    /// * `search_columns` - Vector of column names to search in
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use serde::{Serialize};
+    /// use sqlx_paginated::{QueryParamsBuilder, QuerySortDirection};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String
+    /// }
+    ///
+    /// let params = QueryParamsBuilder::<UserExample>::new()
+    ///     .with_search("john", vec!["name", "email", "username"])
+    ///     .build();
+    /// ```
     pub fn with_search(
         mut self,
         search: impl Into<String>,
@@ -57,6 +142,34 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
         self
     }
 
+    /// Sets date range parameters for filtering by date.
+    ///
+    /// # Arguments
+    ///
+    /// * `date_after` - Optional start date (inclusive)
+    /// * `date_before` - Optional end date (inclusive)
+    /// * `column_name` - Optional column name to apply date range filter (defaults to created_at)
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use chrono::{DateTime, Utc};
+    /// use serde::{Serialize};
+    /// use sqlx_paginated::{QueryParamsBuilder, QuerySortDirection};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String,
+    ///     updated_at: DateTime<Utc>
+    /// }
+    ///
+    /// let start = DateTime::parse_from_rfc3339("2024-01-01T00:00:00Z").unwrap().into();
+    /// let end = DateTime::parse_from_rfc3339("2024-12-31T23:59:59Z").unwrap().into();
+    ///
+    /// let params = QueryParamsBuilder::<UserExample>::new()
+    ///     .with_date_range(Some(start), Some(end), Some("updated_at"))
+    ///     .build();
+    /// ```
     pub fn with_date_range(
         mut self,
         date_after: Option<DateTime<Utc>>,
@@ -74,6 +187,37 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
         self
     }
 
+    /// Adds a single filter condition.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - Column name to filter on
+    /// * `value` - Optional value to filter by
+    ///
+    /// # Details
+    ///
+    /// Only adds the filter if the column exists in the model struct.
+    /// Logs a warning if tracing is enabled and the column is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::any::Any;
+    /// use serde::{Serialize};
+    /// use sqlx_paginated::{QueryParamsBuilder};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String,
+    ///     status: String,
+    ///     role: String
+    /// }
+    ///
+    /// let params = QueryParamsBuilder::<UserExample>::new()
+    ///     .with_filter("status", Some("active"))
+    ///     .with_filter("role", Some("admin"))
+    ///     .build();
+    /// ```
     pub fn with_filter(mut self, key: impl Into<String>, value: Option<impl Into<String>>) -> Self {
         let key = key.into();
         let valid_fields = get_struct_field_names::<T>();
@@ -87,6 +231,39 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
         self
     }
 
+    /// Adds multiple filter conditions from a HashMap.
+    ///
+    /// # Arguments
+    ///
+    /// * `filters` - HashMap of column names and their filter values
+    ///
+    /// # Details
+    ///
+    /// Only adds filters for columns that exist in the model struct.
+    /// Logs a warning if tracing is enabled and a column is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::collections::HashMap;
+    /// use serde::{Serialize};
+    /// use sqlx_paginated::{QueryParamsBuilder};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String,
+    ///     status: String,
+    ///     role: String
+    /// }
+    ///
+    /// let mut filters = HashMap::new();
+    /// filters.insert("status", Some("active"));
+    /// filters.insert("role", Some("admin"));
+    ///
+    /// let params = QueryParamsBuilder::<UserExample>::new()
+    ///     .with_filters(filters)
+    ///     .build();
+    /// ```
     pub fn with_filters(
         mut self,
         filters: HashMap<impl Into<String>, Option<impl Into<String>>>,
@@ -109,6 +286,34 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
         self
     }
 
+    /// Builds and returns the final QueryParams.
+    ///
+    /// # Returns
+    ///
+    /// Returns the constructed `QueryParams<T>` with all the configured parameters.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use chrono::{DateTime, Utc};
+    /// use sqlx_paginated::{QueryParamsBuilder, QuerySortDirection};
+    /// use serde::{Serialize};
+    ///
+    /// #[derive(Serialize, Default)]
+    /// struct UserExample {
+    ///     name: String,
+    ///     status: String,
+    ///     email: String,
+    ///     created_at: DateTime<Utc>
+    /// }
+    ///
+    /// let params = QueryParamsBuilder::<UserExample>::new()
+    ///     .with_pagination(1, 20)
+    ///     .with_sort("created_at", QuerySortDirection::Descending)
+    ///     .with_search("john", vec!["name", "email"])
+    ///     .with_filter("status", Some("active"))
+    ///     .build();
+    /// ```
     pub fn build(self) -> QueryParams<'q, T> {
         self.query
     }
@@ -117,7 +322,7 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::paginated_query_as::internal::SortDirection;
+    use crate::paginated_query_as::models::QuerySortDirection;
     use chrono::{DateTime, Utc};
     use std::collections::HashMap;
 
@@ -141,7 +346,7 @@ mod tests {
         assert_eq!(params.sort.sort_column, "created_at");
         assert!(matches!(
             params.sort.sort_direction,
-            SortDirection::Descending
+            QuerySortDirection::Descending
         ));
     }
 
@@ -158,7 +363,7 @@ mod tests {
         assert_eq!(params.sort.sort_column, "created_at");
         assert!(matches!(
             params.sort.sort_direction,
-            SortDirection::Descending
+            QuerySortDirection::Descending
         ));
     }
 
@@ -216,7 +421,7 @@ mod tests {
     fn test_full_params() {
         let params = QueryParamsBuilder::<TestModel>::new()
             .with_pagination(2, 20)
-            .with_sort("updated_at".to_string(), SortDirection::Ascending)
+            .with_sort("updated_at".to_string(), QuerySortDirection::Ascending)
             .with_search(
                 "test".to_string(),
                 vec!["title".to_string(), "description".to_string()],
@@ -229,7 +434,7 @@ mod tests {
         assert_eq!(params.sort.sort_column, "updated_at");
         assert!(matches!(
             params.sort.sort_direction,
-            SortDirection::Ascending
+            QuerySortDirection::Ascending
         ));
         assert_eq!(params.search.search, Some("test".to_string()));
         assert_eq!(

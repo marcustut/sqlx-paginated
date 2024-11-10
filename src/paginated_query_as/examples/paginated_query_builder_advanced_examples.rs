@@ -1,7 +1,6 @@
-use crate::paginated_query_as::internal::SortDirection;
 use crate::paginated_query_as::QueryParamsBuilder;
 use crate::{paginated_query_as, QueryBuilder};
-use crate::{PaginatedQueryBuilder, PaginatedResponse};
+use crate::{PaginatedResponse, QuerySortDirection};
 use chrono::Utc;
 use serde::Serialize;
 use sqlx::{Arguments, FromRow, PgPool, Postgres};
@@ -29,7 +28,7 @@ pub async fn paginated_query_builder_advanced_example(
         .with_date_range(Some(Utc::now()), None, None::<String>)
         .with_filter("status", Some("active"))
         .with_filters(some_extra_filters)
-        .with_sort("created_at", SortDirection::Descending)
+        .with_sort("created_at", QuerySortDirection::Descending)
         .build();
 
     paginated_query_as!(UserExample, "SELECT * FROM users")
