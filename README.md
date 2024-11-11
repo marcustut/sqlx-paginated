@@ -57,11 +57,10 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 - 🛡️ SQL injection protection
 
 ### Technical Features
-- Builder pattern for query construction
-- Automatic PostgreSQL type casting
-- Error handling and logging
-- Serialization/deserialization support
-- Custom base query support
+- Builder patterns for query parameters and query construction
+- Graceful error handling
+- Logging with tracing (if enabled)
+- Macro and function support
 
 ### Query Features
 - Case-insensitive search
@@ -75,14 +74,14 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 ## Database Support
 
 ### Current vs Planned Support
-| Database    | Status      | Version | Features                           | Notes                                       |
-|-------------|-------------|---------|-----------------------------------|---------------------------------------------|
-| PostgreSQL  | ✅ Full     | 12+     | All features supported            | Production ready, fully tested              |
-| SQLite      | 🚧 Planned  | 3.35+   | Basic features planned           | Development starting after mid January 2025 |
-| MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap                                  |
-| MSSQL       | 🚧 Planned  | 2019+   | Core features planned            | On roadmap                                  |
+| Database    | Status      | Version | Features                           | Notes                                   |
+|-------------|-------------|---------|-----------------------------------|-----------------------------------------|
+| PostgreSQL  | ✅ Supported | 12+     | All features supported            | Production ready, fully tested          |
+| SQLite      | 🚧 Planned  | 3.35+   | Basic features planned           | Development starting after mid Feb 2025 |
+| MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap                              |
+| MSSQL       | 🚧 Planned  | 2019+   | Core features planned            | On roadmap                              |
 
-Note: This documentation covers PostgreSQL features only, as it's currently the only fully supported database.
+⚠️ Note: `This documentation covers PostgreSQL features only, as it's currently the only fully supported database.`
 
 ## Market Analysis
 
@@ -90,13 +89,11 @@ Note: This documentation covers PostgreSQL features only, as it's currently the 
 1. **Query builders**
    - Diesel: Full ORM, can be heavyweight
    - SQLx: Great low-level toolkit but no high-level query building
-   - SeaQuery: Generic and verbose, lacks PostgreSQL-specific features
+   - SeaQuery: Generic and verbose
    - sqlbuilder: Basic SQL building without pagination or security
 
 2. **Missing features in existing solutions**
    - Type-safe pagination
-   - Built-in SQL injection protection
-   - System table access control
    - Easy integration with web frameworks
    - Automatic type casting
    - Typesafe search/filter/sort/pagination capabilities
@@ -104,12 +101,13 @@ Note: This documentation covers PostgreSQL features only, as it's currently the 
 ### Unique Selling Points
 
 1. **Quick Web Framework Integration**
+
+[Actix Web](https://actix.rs/) handler example
 ```rust
-// Actix Web example
 async fn list_users(Query(params): Query<QueryParams>) -> impl Responder {
     let query = paginated_query_as!(User, "SELECT * FROM users")
         .with_params(params)
-        .disable_totals_count() // Speeds up the response, but removes the `total, total_pages` related query.
+        .disable_totals_count()
         .fetch_paginated(&pool);
 }
 ```
@@ -119,13 +117,14 @@ async fn list_users(Query(params): Query<QueryParams>) -> impl Responder {
 // Type inference and validation
 let params = QueryParamsBuilder::<User>::new()
     .with_pagination(1, 10)
-    .with_sort("created_at", SortDirection::Descending)
+    .with_sort("created_at", QuerySortDirection::Descending)
     .with_search("john", vec!["name", "email"])
     .build();
 ```
 
-3.  **Advanced Builder Patterns
-4. 
+3. **Advanced Builder Patterns**
+- Optional fluent API for query parameters (QueryParams) which allow defining search, search location, date filtering, ordering, and custom filtering.
+- Fluent API for the entire supported feature set, more here: [advanced example](src/paginated_query_as/examples/paginated_query_builder_advanced_examples.rs)
 
 ### Target Audience
 1. **Primary users**
@@ -161,8 +160,20 @@ struct User {
     created_at: Option<DateTime<Utc>>,
 }
 
+/// Macro usage example
 async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error> {
     let paginated_response = paginated_query_as!(User, "SELECT * FROM users")
+        .with_params(params)
+        .fetch_paginated(&pool)
+        .await
+        .unwrap();
+
+    paginated_response
+}
+
+/// Alternative function call example (if macros cannot be applied to your use case)
+async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error> {
+    let paginated_response = paginated_query_as::<User>("SELECT * FROM users")
         .with_params(params)
         .fetch_paginated(&pool)
         .await
@@ -369,7 +380,7 @@ pub async fn paginated_query_builder_advanced_example(
                 .with_filters(params)
                 .with_date_range(params)
                 .with_raw_condition("") // Add raw condition, no checks
-                .disable_protection() // Skips 'is_safe' check
+                .disable_protection() // This removes all column safety checks
                 .with_combined_conditions(|builder| {
                     if builder.has_column("status") && builder.has_column("role") {
                         builder
@@ -386,6 +397,7 @@ pub async fn paginated_query_builder_advanced_example(
                 })
                 .build()
         })
+        .disable_totals_count() // Disables the calculation of total record count.
         .fetch_paginated(&pool)
         .await
         .unwrap()

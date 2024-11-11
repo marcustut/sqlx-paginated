@@ -8,9 +8,14 @@ use std::marker::PhantomData;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct PaginatedResponse<T> {
     pub records: Vec<T>,
-    #[serde(flatten)]
-    pub pagination: QueryPaginationParams,
+
+    #[serde(flatten, skip_serializing_if = "Option::is_none")]
+    pub pagination: Option<QueryPaginationParams>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub total: Option<i64>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub total_pages: Option<i64>,
 }
 
