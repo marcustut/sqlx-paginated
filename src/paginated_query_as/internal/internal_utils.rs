@@ -5,8 +5,6 @@ use crate::paginated_query_as::internal::{
 use crate::QuerySortDirection;
 use serde::Serialize;
 use serde_json::Value;
-use sqlx::types::chrono::{DateTime, Utc};
-use sqlx::types::Uuid;
 
 pub fn default_page() -> i64 {
     DEFAULT_PAGE
@@ -61,36 +59,6 @@ where
     }
 }
 
-pub fn get_postgres_type_casting(value: &str) -> &'static str {
-    match value.to_string().to_lowercase().as_str() {
-        // Booleans
-        value if value == "t" || value == "f" => "::boolean",
-        value if value == "true" || value == "false" => "::boolean",
-
-        // Numbers
-        value if value.parse::<i64>().is_ok() => "::bigint",
-        value if value.parse::<f64>().is_ok() => "::double precision",
-
-        // UUIDs
-        value if Uuid::parse_str(value).is_ok() => "::uuid",
-
-        // JSON
-        value if value.starts_with('{') || value.starts_with('[') => {
-            if serde_json::from_str::<serde_json::Value>(value).is_ok() {
-                "::jsonb"
-            } else {
-                ""
-            }
-        }
-
-        // Dates/Timestamps
-        value if value.parse::<DateTime<Utc>>().is_ok() => "::timestamp with time zone",
-
-        // Default - no type cast
-        _ => "",
-    }
-}
-
 pub fn extract_digits_from_strings(val: impl Into<String>) -> String {
     val.into().chars().filter(|c| c.is_ascii_digit()).collect()
 }
@@ -100,7 +68,6 @@ mod tests {
     use super::*;
     use crate::paginated_query_as::internal::DEFAULT_MIN_PAGE_SIZE;
     use crate::paginated_query_as::models::QuerySortDirection;
-    use chrono::Utc;
     use serde::Serialize;
 
     #[test]
@@ -225,81 +192,6 @@ mod tests {
         assert!(fields.contains(&"email_address".to_string())); // renamed field
         assert!(!fields.contains(&"internal".to_string())); // skipped field
         assert_eq!(fields.len(), 3);
-    }
-
-    #[test]
-    fn test_get_pg_type_cast() {
-        // Booleans
-        assert_eq!(get_postgres_type_casting(&"true"), "::boolean");
-        assert_eq!(get_postgres_type_casting(&"false"), "::boolean");
-        assert_eq!(get_postgres_type_casting(&"t"), "::boolean");
-        assert_eq!(get_postgres_type_casting(&"f"), "::boolean");
-        assert_eq!(get_postgres_type_casting(&"TRUE"), "::boolean");
-        assert_eq!(get_postgres_type_casting(&"FALSE"), "::boolean");
-
-        // Numbers
-        assert_eq!(get_postgres_type_casting(&"123"), "::bigint");
-        assert_eq!(get_postgres_type_casting(&"-456"), "::bigint");
-        assert_eq!(get_postgres_type_casting(&"123.45"), "::double precision");
-        assert_eq!(get_postgres_type_casting(&"-123.45"), "::double precision");
-        assert_eq!(get_postgres_type_casting(&"1e10"), "::double precision");
-
-        // UUIDs
-        assert_eq!(
-            get_postgres_type_casting(&"550e8400-e29b-41d4-a716-446655440000"),
-            "::uuid"
-        );
-        assert_eq!(
-            get_postgres_type_casting(&"550E8400-E29B-41D4-A716-446655440000"),
-            "::uuid"
-        );
-
-        // JSON
-        assert_eq!(get_postgres_type_casting(&"{}"), "::jsonb");
-        assert_eq!(get_postgres_type_casting(&"[]"), "::jsonb");
-        assert_eq!(
-            get_postgres_type_casting(&"{\"key\": \"value\"}"),
-            "::jsonb"
-        );
-
-        // Timestamps
-        assert_eq!(
-            get_postgres_type_casting(&"2024-01-01T00:00:00Z"),
-            "::timestamp with time zone"
-        );
-        assert_eq!(
-            get_postgres_type_casting(&Utc::now().to_rfc3339()),
-            "::timestamp with time zone"
-        );
-
-        // No type cast
-        assert_eq!(get_postgres_type_casting(&"regular text"), "");
-        assert_eq!(get_postgres_type_casting(&""), "");
-        assert_eq!(get_postgres_type_casting(&"not-a-uuid"), "");
-        assert_eq!(get_postgres_type_casting(&"not_a_timestamp"), "");
-    }
-
-    #[test]
-    fn test_get_pg_type_cast_edge_cases() {
-        // Almost numbers
-        assert_eq!(get_postgres_type_casting(&"12.34.56"), ""); // invalid float
-        assert_eq!(get_postgres_type_casting(&"123abc"), ""); // not a number
-
-        // Almost booleans
-        assert_eq!(get_postgres_type_casting(&"truthy"), "");
-        assert_eq!(get_postgres_type_casting(&"falsey"), "");
-
-        // Almost UUIDs
-        assert_eq!(get_postgres_type_casting(&"550e8400-e29b-41d4-a716"), ""); // incomplete
-        assert_eq!(get_postgres_type_casting(&"not-a-uuid-at-all"), "");
-
-        // Almost JSON
-        assert_eq!(get_postgres_type_casting(&"{invalid json}"), "");
-        assert_eq!(get_postgres_type_casting(&"[incomplete array"), "");
-
-        // Almost timestamps
-        assert_eq!(get_postgres_type_casting(&"2024-01-01"), ""); // date only
-        assert_eq!(get_postgres_type_casting(&"00:00:00Z"), ""); // time only
     }
 
     #[derive(Default, Serialize)]

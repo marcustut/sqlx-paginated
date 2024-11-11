@@ -322,6 +322,9 @@ impl<'q, T: Default + Serialize> QueryParamsBuilder<'q, T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::paginated_query_as::internal::{
+        DEFAULT_SEARCH_COLUMN_NAMES, DEFAULT_SORT_COLUMN_NAME,
+    };
     use crate::paginated_query_as::models::QuerySortDirection;
     use chrono::{DateTime, Utc};
     use std::collections::HashMap;
@@ -335,6 +338,123 @@ mod tests {
         category: String,
         updated_at: DateTime<Utc>,
         created_at: DateTime<Utc>,
+    }
+
+    #[test]
+    fn test_pagination_defaults() {
+        let params = QueryParamsBuilder::<TestModel>::new().build();
+
+        assert_eq!(
+            params.pagination.page_size, DEFAULT_MIN_PAGE_SIZE,
+            "Default page size should be {}",
+            DEFAULT_MIN_PAGE_SIZE
+        );
+        assert_eq!(
+            params.pagination.page, DEFAULT_PAGE,
+            "Default page should be {}",
+            DEFAULT_PAGE
+        );
+
+        // Test page size clamping
+        let params = QueryParamsBuilder::<TestModel>::new()
+            .with_pagination(1, DEFAULT_MAX_PAGE_SIZE + 10)
+            .build();
+
+        assert_eq!(
+            params.pagination.page_size, DEFAULT_MAX_PAGE_SIZE,
+            "Page size should be clamped to maximum {}",
+            DEFAULT_MAX_PAGE_SIZE
+        );
+
+        let params = QueryParamsBuilder::<TestModel>::new()
+            .with_pagination(1, DEFAULT_MIN_PAGE_SIZE - 5)
+            .build();
+
+        assert_eq!(
+            params.pagination.page_size, DEFAULT_MIN_PAGE_SIZE,
+            "Page size should be clamped to minimum {}",
+            DEFAULT_MIN_PAGE_SIZE
+        );
+    }
+
+    #[test]
+    fn test_default_sort_column() {
+        let params = QueryParamsBuilder::<TestModel>::new().build();
+
+        assert_eq!(
+            params.sort.sort_column, DEFAULT_SORT_COLUMN_NAME,
+            "Default sort column should be '{}'",
+            DEFAULT_SORT_COLUMN_NAME
+        );
+    }
+
+    #[test]
+    fn test_date_range_defaults() {
+        let params = QueryParamsBuilder::<TestModel>::new().build();
+
+        assert_eq!(
+            params.date_range.date_column,
+            Some(DEFAULT_DATE_RANGE_COLUMN_NAME.to_string()),
+            "Default date range column should be '{}'",
+            DEFAULT_DATE_RANGE_COLUMN_NAME
+        );
+        assert!(
+            params.date_range.date_after.is_none(),
+            "Default date_after should be None"
+        );
+        assert!(
+            params.date_range.date_before.is_none(),
+            "Default date_before should be None"
+        );
+    }
+
+    #[test]
+    fn test_search_defaults() {
+        let params = QueryParamsBuilder::<TestModel>::new().build();
+
+        // Check if default search columns are set
+        assert_eq!(
+            params.search.search_columns,
+            Some(
+                DEFAULT_SEARCH_COLUMN_NAMES
+                    .iter()
+                    .map(|&s| s.to_string())
+                    .collect()
+            ),
+            "Default search columns should be {:?}",
+            DEFAULT_SEARCH_COLUMN_NAMES
+        );
+        assert!(
+            params.search.search.is_none(),
+            "Default search term should be None"
+        );
+    }
+
+    #[test]
+    fn test_combined_defaults() {
+        let params = QueryParamsBuilder::<TestModel>::new().build();
+
+        // Test all defaults together
+        assert_eq!(params.pagination.page, DEFAULT_PAGE);
+        assert_eq!(params.pagination.page_size, DEFAULT_MIN_PAGE_SIZE);
+        assert_eq!(params.sort.sort_column, DEFAULT_SORT_COLUMN_NAME);
+        assert_eq!(params.sort.sort_direction, QuerySortDirection::Descending);
+        assert_eq!(
+            params.date_range.date_column,
+            Some(DEFAULT_DATE_RANGE_COLUMN_NAME.to_string())
+        );
+        assert_eq!(
+            params.search.search_columns,
+            Some(
+                DEFAULT_SEARCH_COLUMN_NAMES
+                    .iter()
+                    .map(|&s| s.to_string())
+                    .collect()
+            )
+        );
+        assert!(params.search.search.is_none());
+        assert!(params.date_range.date_after.is_none());
+        assert!(params.date_range.date_before.is_none());
     }
 
     #[test]

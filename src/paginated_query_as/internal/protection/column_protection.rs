@@ -1,3 +1,4 @@
+use crate::paginated_query_as::internal::protection::COLUMN_PROTECTION_BLOCKED_POSTGRES;
 use std::collections::HashSet;
 
 /// Protects columns against SQL injection and system table access
@@ -26,27 +27,11 @@ impl ColumnProtection {
     }
 
     fn add_default_blocks(&mut self) {
-        let blocked = [
-            // System schemas and tables
-            "pg_",
-            "information_schema.",
-            // System columns
-            "oid",
-            "tableoid",
-            "xmin",
-            "xmax",
-            "cmin",
-            "cmax",
-            "ctid",
-            // Other sensitive prefixes
-            "pg_catalog",
-            "pg_toast",
-            "pg_temp",
-            "pg_internal",
-        ];
-
-        self.blocked_patterns
-            .extend(blocked.iter().map(|&s| s.to_string()));
+        self.blocked_patterns.extend(
+            COLUMN_PROTECTION_BLOCKED_POSTGRES
+                .iter()
+                .map(|&s| s.to_string()),
+        );
     }
 
     #[allow(dead_code)]
