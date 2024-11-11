@@ -9,8 +9,7 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 
 ## Table of Contents
 - [Paginated queries for SQLx](#paginated-queries-for-sqlx)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
+    - [Features](#features)
     - [Core Capabilities](#core-capabilities)
     - [Technical Features](#technical-features)
     - [Query Features](#query-features)
@@ -81,7 +80,7 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 | MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap                              |
 | MSSQL       | 🚧 Planned  | 2019+   | Core features planned            | On roadmap                              |
 
-⚠️ Note: `This documentation covers PostgreSQL features only, as it's currently the only fully supported database.`
+⚠️ Note: `This documentation covers PostgreSQL features only, as it's currently the only supported database.`
 
 ## Market Analysis
 
@@ -93,28 +92,30 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
    - sqlbuilder: Basic SQL building without pagination or security
 
 2. **Missing features in existing solutions**
-   - Type-safe pagination
    - Easy integration with web frameworks
    - Automatic type casting
    - Typesafe search/filter/sort/pagination capabilities
 
 ### Unique Selling Points
 
-1. **Quick Web Framework Integration**
+1. **Quick Web Framework Integration with minimal footprint**
 
 [Actix Web](https://actix.rs/) handler example
 ```rust
-async fn list_users(Query(params): Query<QueryParams>) -> impl Responder {
-    let query = paginated_query_as!(User, "SELECT * FROM users")
+use sqlx_paginated::{paginated_query_as, FlatQueryParams};
+use actix_web::{web, Responder};
+
+async fn list_users(web::Query(params): web::Query<FlatQueryParams>) -> impl Responder {
+    let users = paginated_query_as!(User, "SELECT * FROM users")
         .with_params(params)
-        .disable_totals_count()
-        .fetch_paginated(&pool);
+        .fetch_paginated(&pool)
+        .await
+        .unwrap();
 }
 ```
 
-2. **Type Safety & Ergonomics**
+2. **Type Safety & Ergonomics for parameter configuration**
 ```rust
-// Type inference and validation
 let params = QueryParamsBuilder::<User>::new()
     .with_pagination(1, 10)
     .with_sort("created_at", QuerySortDirection::Descending)
@@ -125,6 +126,28 @@ let params = QueryParamsBuilder::<User>::new()
 3. **Advanced Builder Patterns**
 - Optional fluent API for query parameters (QueryParams) which allow defining search, search location, date filtering, ordering, and custom filtering.
 - Fluent API for the entire supported feature set, more here: [advanced example](src/paginated_query_as/examples/paginated_query_builder_advanced_examples.rs)
+
+```rust
+    paginated_query_as!(UserExample, "SELECT * FROM users")
+        .with_params(initial_params)
+        .with_query_builder(|params| {
+            // Can override the default query builder (build_query_with_safe_defaults) with a complete custom one:
+            QueryBuilder::<UserExample, Postgres>::new()
+                .with_search(params) // Add or remove search feature from the query;
+                .with_filters(params) // Add or remove custom filters from the query;
+                .with_date_range(params) // Add or remove data range;
+                .with_raw_condition("") // Add raw condition, no checks.
+                .disable_protection() // This removes all column safety checks.
+                .with_combined_conditions(|builder| {
+                   // ...
+                .build()
+        })
+        .disable_totals_count() // Disables the calculation of total record count
+        .fetch_paginated(&pool)
+        .await
+        .unwrap()
+```
+
 
 ### Target Audience
 1. **Primary users**
@@ -262,15 +285,38 @@ GET /v1/internal/users?confirmed=true
 
 ## Complex Query Examples
 
-### Combined Search, Sort, and Pagination
+- Given the following `struct`, we can then perform search and filtering
+against its own fields. 
+- We should also receive a paginated response back with the matching records.
+
+```rust
+#[derive(Serialize, Deserialize, FromRow, Default)]
+pub struct User {
+    pub id: Option<Uuid>,
+    pub first_name: String,
+    pub last_name: String,
+    pub confirmed: Option<bool>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+```
+
+1. ### Combined search, sort, date interval, pagination and custom filter
+
+- Notice the `confirmed=true` filter.
+
+Request:
 ```
 GET /v1/internal/users
     ?search=john
     &search_columns=first_name,last_name,email
     &sort_column=created_at
     &sort_direction=descending
+    &date_before=2024-11-03T12:30:12.081598Z
+    &date_after=2024-11-02T12:30:12.081598Z
     &page=1
     &page_size=20
+    &confirmed=true
 ```
 
 Response:
@@ -287,7 +333,8 @@ Response:
       "last_name": "Smith",
       "email": "john.smith@example.com",
       "confirmed": true,
-      "created_at": "2024-11-03T12:30:12.081598Z"
+      "created_at": "2024-11-03T12:30:12.081598Z",
+      "updated_at": "2024-11-03T12:30:12.081598Z"
     },
     {
       "id": "9167d825-8944-4428-bf91-3c5531728b5e",
@@ -295,20 +342,45 @@ Response:
       "last_name": "Doe",
       "email": "johnny.doe@example.com",
       "confirmed": true,
-      "created_at": "2024-10-28T19:14:49.064626Z"
+      "created_at": "2024-10-28T19:14:49.064626Z",
+      "updated_at": "2024-10-28T19:14:49.064626Z"
     }
   ]
 }
 ```
 
-### Filtered Date Range with another field
+2. ### Date interval filter combined with two other custom filters
+
+- Notice the `confirmed=true` and `first_name=Alex` filters.
+- For the `first_name` filter the value will be an exact match (case-sensitive).
+
+Request:
 ```
 GET /v1/internal/users
-    ?date_column=created_at
-    &date_after=2024-01-01T00:00:00Z
-    &date_before=2024-12-31T23:59:59Z
-    &confirmed=active
-    &sort_column=last_login
+    ?date_before=2024-11-03T12:30:12.081598Z
+    &date_after=2024-11-02T12:30:12.081598Z
+    &confirmed=true
+    &first_name=Alex
+```
+
+Response:
+```json
+{
+  "page": 1,
+  "page_size": 20,
+  "total": 1,
+  "total_pages": 1,
+  "records": [
+    {
+      "id": "509e3900-c190-4dad-882d-ec2d40245329",
+      "first_name": "Alex",
+      "last_name": "Ghinea",
+      "email": "alex.ghinea@example.com",
+      "confirmed": true,
+      "created_at": "2024-11-02T12:30:12.081598Z"
+    }
+  ]
+}
 ```
 
 ## Performance Considerations
@@ -341,74 +413,15 @@ CREATE INDEX idx_users_metadata ON users USING gin(metadata);
 | 51-100    | Caution | ⚠️ Monitor        |
 | 100+      | Poor    | ❌ Not Recommended |
 
-## Advanced Builders
-If you need to, you can also construct programmatically all the conditions you might ever need on a struct.
-Below is an exhaustive example where not only the core DB query builder is being programmatically built, but also the query params.
-
-```rust
-
-#[derive(Default, Serialize, FromRow)]
-#[allow(dead_code)]
-pub struct UserExample {
-    id: String,
-    name: String,
-    email: String,
-    status: String,
-    score: i32,
-}
-
-#[allow(dead_code)]
-pub async fn paginated_query_builder_advanced_example(
-    pool: PgPool,
-) -> PaginatedResponse<UserExample> {
-    let some_extra_filters =
-        HashMap::from([("a", Some("1".to_string())), ("b", Some("2".to_string()))]);
-    let initial_params = QueryParamsBuilder::<UserExample>::new()
-        .with_search("john", vec!["name", "email"])
-        .with_pagination(1, 10)
-        .with_date_range(Some(Utc::now()), None, None::<String>)
-        .with_filter("status", Some("active"))
-        .with_filters(some_extra_filters)
-        .with_sort("created_at", QuerySortDirection::Descending)
-        .build();
-
-    paginated_query_as!(UserExample, "SELECT * FROM users")
-        .with_params(initial_params)
-        .with_query_builder(|params| {
-            QueryBuilder::<UserExample, Postgres>::new()
-                .with_search(params)
-                .with_filters(params)
-                .with_date_range(params)
-                .with_raw_condition("") // Add raw condition, no checks
-                .disable_protection() // This removes all column safety checks
-                .with_combined_conditions(|builder| {
-                    if builder.has_column("status") && builder.has_column("role") {
-                        builder
-                            .conditions
-                            .push("(status = 'active' AND role IN ('admin', 'user'))".to_string());
-                    }
-                    if builder.has_column("score") {
-                        builder
-                            .conditions
-                            .push("score BETWEEN $1 AND $2".to_string());
-                        let _ = builder.arguments.add(50);
-                        let _ = builder.arguments.add(100);
-                    }
-                })
-                .build()
-        })
-        .disable_totals_count() // Disables the calculation of total record count.
-        .fetch_paginated(&pool)
-        .await
-        .unwrap()
-}
-```
 
 ## Security Features
 
 ### Input Sanitization
 - Search terms are cleaned and normalized
-- Column names are validated against allowlist
+- All input values are trimmed and/or clamped against their defaults
+- Column names are validated against an allowlist:
+  - The struct itself first;
+  - Database specific table names second;
 - SQL injection patterns are blocked
 - System table access is prevented
 

@@ -13,6 +13,7 @@ pub struct UserExample {
     name: String,
     email: String,
     status: String,
+    role: String,
     score: i32,
 }
 
@@ -34,12 +35,13 @@ pub async fn paginated_query_builder_advanced_example(
     paginated_query_as!(UserExample, "SELECT * FROM users")
         .with_params(initial_params)
         .with_query_builder(|params| {
+            // Can override the default query builder (build_query_with_safe_defaults) with a complete custom one:
             QueryBuilder::<UserExample, Postgres>::new()
-                .with_search(params)
-                .with_filters(params)
-                .with_date_range(params)
-                .with_raw_condition("") // Add raw condition, no checks
-                .disable_protection() // Skips 'is_safe' check
+                .with_search(params) // Add or remove search feature from the query;
+                .with_filters(params) // Add or remove custom filters from the query;
+                .with_date_range(params) // Add or remove data range;
+                .with_raw_condition("") // Add raw condition, no checks.
+                .disable_protection() // This removes all column safety checks.
                 .with_combined_conditions(|builder| {
                     if builder.has_column("status") && builder.has_column("role") {
                         builder
