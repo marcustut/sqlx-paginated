@@ -9,8 +9,7 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 
 ## Table of Contents
 - [Paginated queries for SQLx](#paginated-queries-for-sqlx)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
+    - [Features](#features)
     - [Core Capabilities](#core-capabilities)
     - [Technical Features](#technical-features)
     - [Query Features](#query-features)
@@ -81,7 +80,7 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 | MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap                              |
 | MSSQL       | 🚧 Planned  | 2019+   | Core features planned            | On roadmap                              |
 
-⚠️ Note: `This documentation covers PostgreSQL features only, as it's currently the only fully supported database.`
+⚠️ Note: `This documentation covers PostgreSQL features only, as it's currently the only supported database.`
 
 ## Market Analysis
 
@@ -93,28 +92,30 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
    - sqlbuilder: Basic SQL building without pagination or security
 
 2. **Missing features in existing solutions**
-   - Type-safe pagination
    - Easy integration with web frameworks
    - Automatic type casting
    - Typesafe search/filter/sort/pagination capabilities
 
 ### Unique Selling Points
 
-1. **Quick Web Framework Integration**
+1. **Quick Web Framework Integration with minimal footprint**
 
 [Actix Web](https://actix.rs/) handler example
 ```rust
-async fn list_users(Query(params): Query<QueryParams>) -> impl Responder {
-    let query = paginated_query_as!(User, "SELECT * FROM users")
+use sqlx_paginated::{paginated_query_as, FlatQueryParams};
+use actix_web::{web, Responder};
+
+async fn list_users(web::Query(params): web::Query<FlatQueryParams>) -> impl Responder {
+    let users = paginated_query_as!(User, "SELECT * FROM users")
         .with_params(params)
-        .disable_totals_count()
-        .fetch_paginated(&pool);
+        .fetch_paginated(&pool)
+        .await
+        .unwrap();
 }
 ```
 
-2. **Type Safety & Ergonomics**
+2. **Type Safety & Ergonomics for parameter configuration**
 ```rust
-// Type inference and validation
 let params = QueryParamsBuilder::<User>::new()
     .with_pagination(1, 10)
     .with_sort("created_at", QuerySortDirection::Descending)
@@ -130,7 +131,7 @@ let params = QueryParamsBuilder::<User>::new()
     paginated_query_as!(UserExample, "SELECT * FROM users")
         .with_params(initial_params)
         .with_query_builder(|params| {
-        // Can override the default query builder (build_query_with_safe_defaults) with a complete custom one:
+            // Can override the default query builder (build_query_with_safe_defaults) with a complete custom one:
             QueryBuilder::<UserExample, Postgres>::new()
                 .with_search(params) // Add or remove search feature from the query;
                 .with_filters(params) // Add or remove custom filters from the query;
@@ -141,6 +142,7 @@ let params = QueryParamsBuilder::<User>::new()
                    // ...
                 .build()
         })
+        .disable_totals_count() // Disables the calculation of total record count
         .fetch_paginated(&pool)
         .await
         .unwrap()
