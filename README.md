@@ -285,9 +285,9 @@ GET /v1/internal/users?confirmed=true
 
 ## Complex Query Examples
 
-Given the following `struct`, we can then perform search and filtering
+- Given the following `struct`, we can then perform search and filtering
 against its own fields. 
-We should also receive a paginated response back with the matching records.
+- We should also receive a paginated response back with the matching records.
 
 ```rust
 #[derive(Serialize, Deserialize, FromRow, Default)]
