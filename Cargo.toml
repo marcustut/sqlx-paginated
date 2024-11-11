@@ -1,6 +1,6 @@
 [package]
 name = "sqlx-paginated"
-version = "0.2.2"
+version = "0.2.21"
 edition = "2021"
 authors = ["@alexandrughinea"]
 description = "A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless pagination, searching, filtering, and sorting."
@@ -11,9 +11,9 @@ documentation = "https://docs.rs/sqlx-paginated"
 [features]
 tracing = ["tracing/default"]
 postgres = ["sqlx/postgres"]
-sqlite = ["sqlx/sqlite"]
-
-default = ["postgres", "sqlite"]
+mysql= ["sqlx/mysql"] # - Q2 2025
+sqlite = ["sqlx/sqlite"] #- Q1 2025
+default = ["postgres"]
 
 [lib]
 path = "src/lib.rs"
@@ -32,5 +32,4 @@ serde = { version = "1.0.214", features = ["derive"] }
 serde_json = "1.0.132"
 chrono = { version = "0.4.38", features = ["serde"] }
 tracing = "0.1.40"
-tokio = "1.41.1"
 hex = "0.4.3"

@@ -1,4 +1,4 @@
-use crate::paginated_query_as::examples::build_query_with_safe_defaults;
+use crate::paginated_query_as::examples::postgres_examples::build_query_with_safe_defaults;
 use crate::paginated_query_as::internal::quote_identifier;
 use crate::paginated_query_as::models::QuerySortDirection;
 use crate::{FlatQueryParams, PaginatedResponse, QueryParams};

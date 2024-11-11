@@ -1,8 +1,8 @@
 # Paginated queries for SQLx
 
 [![Rust](https://github.com/alexandrughinea/sqlx-paginated/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/alexandrughinea/sqlx-paginated/actions/workflows/rust.yml)
-[![Crates.io](https://img.shields.io/crates/v/sqlx-paginate.svg)](https://crates.io/crates/sqlx-paginate)
-[![Documentation](https://docs.rs/sqlx-paginate/badge.svg)](https://docs.rs/sqlx-paginate)
+[![Crates.io](https://img.shields.io/crates/v/sqlx-paginate.svg)](https://crates.io/crates/sqlx-paginated)
+[![Documentation](https://docs.rs/sqlx-paginate/badge.svg)](https://docs.rs/sqlx-paginated)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless pagination, searching, filtering, and sorting.
@@ -29,14 +29,13 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
     - [Search Parameters](#search-parameters)
     - [Date Range Parameters](#date-range-parameters)
     - [Filtering Parameters](#filtering-parameters)
-  - [Complex Query Examples](#complex-query-examples)
-    - [Combined Search, Sort, and Pagination](#combined-search-sort-and-pagination)
-    - [Filtered Date Range with another field](#filtered-date-range-with-another-field)
+  - [Query Examples](#query-examples)
+    - [Combined search, sort, date range, pagination and filter](#combined-search-sort-date-range-pagination-and-custom-filter)
+    - [Date Range combined with two other filters](#date-range-filter-combined-with-two-other-custom-filters)
   - [Performance Considerations](#performance-considerations)
     - [Query Pattern Optimization](#query-pattern-optimization)
     - [Recommended Indexes](#recommended-indexes)
     - [Pagination Performance](#pagination-performance)
-  - [Advanced Builders](#advanced-builders)
   - [Security Features](#security-features)
     - [Input Sanitization](#input-sanitization)
     - [Protected Patterns](#protected-patterns)
@@ -73,12 +72,11 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 ## Database Support
 
 ### Current vs Planned Support
-| Database    | Status      | Version | Features                           | Notes                                   |
-|-------------|-------------|---------|-----------------------------------|-----------------------------------------|
-| PostgreSQL  | ✅ Supported | 12+     | All features supported            | Production ready, fully tested          |
-| SQLite      | 🚧 Planned  | 3.35+   | Basic features planned           | Development starting after mid Feb 2025 |
-| MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap                              |
-| MSSQL       | 🚧 Planned  | 2019+   | Core features planned            | On roadmap                              |
+| Database    | Status      | Version | Features                           | Notes                           |
+|-------------|-------------|---------|-----------------------------------|---------------------------------|
+| PostgreSQL  | ✅ Supported | 12+     | All features supported            | Ready                           |
+| SQLite      | 🚧 Planned  | 3.35+   | Basic features planned           | Development starting in Q1 2025 |
+| MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap                      |
 
 ⚠️ Note: `This documentation covers PostgreSQL features only, as it's currently the only supported database.`
 
@@ -87,8 +85,7 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 ### Ecosystem Gaps
 1. **Query builders**
    - Diesel: Full ORM, can be heavyweight
-   - SQLx: Great low-level toolkit but no high-level query building
-   - SeaQuery: Generic and verbose
+   - SeaQuery: Generic and can be verbose
    - sqlbuilder: Basic SQL building without pagination or security
 
 2. **Missing features in existing solutions**
@@ -103,14 +100,16 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 [Actix Web](https://actix.rs/) handler example
 ```rust
 use sqlx_paginated::{paginated_query_as, FlatQueryParams};
-use actix_web::{web, Responder};
+use actix_web::{web, Responder, HttpResponse};
 
 async fn list_users(web::Query(params): web::Query<FlatQueryParams>) -> impl Responder {
-    let users = paginated_query_as!(User, "SELECT * FROM users")
+    let paginated_users = paginated_query_as!(User, "SELECT * FROM users")
         .with_params(params)
         .fetch_paginated(&pool)
         .await
         .unwrap();
+    
+    HttpResponse::Ok().json(json!(paginated_users))
 }
 ```
 
@@ -186,17 +185,8 @@ struct User {
 /// Macro usage example
 async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error> {
     let paginated_response = paginated_query_as!(User, "SELECT * FROM users")
-        .with_params(params)
-        .fetch_paginated(&pool)
-        .await
-        .unwrap();
-
-    paginated_response
-}
-
-/// Alternative function call example (if macros cannot be applied to your use case)
-async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error> {
-    let paginated_response = paginated_query_as::<User>("SELECT * FROM users")
+        // Alternative function call example (if macros cannot be applied to your use case):
+        // paginated_query_as::<User>("SELECT * FROM users")
         .with_params(params)
         .fetch_paginated(&pool)
         .await
@@ -283,7 +273,7 @@ Example:
 GET /v1/internal/users?confirmed=true
 ```
 
-## Complex Query Examples
+## Query Examples
 
 - Given the following `struct`, we can then perform search and filtering
 against its own fields. 
@@ -301,7 +291,7 @@ pub struct User {
 }
 ```
 
-1. ### Combined search, sort, date interval, pagination and custom filter
+1. ### Combined search, sort, date range, pagination and custom filter
 
 - Notice the `confirmed=true` filter.
 
@@ -349,7 +339,7 @@ Response:
 }
 ```
 
-2. ### Date interval filter combined with two other custom filters
+2. ### Date range filter combined with two other custom filters
 
 - Notice the `confirmed=true` and `first_name=Alex` filters.
 - For the `first_name` filter the value will be an exact match (case-sensitive).
@@ -374,8 +364,8 @@ Response:
     {
       "id": "509e3900-c190-4dad-882d-ec2d40245329",
       "first_name": "Alex",
-      "last_name": "Ghinea",
-      "email": "alex.ghinea@example.com",
+      "last_name": "Johnson",
+      "email": "alex.johnson@example.com",
       "confirmed": true,
       "created_at": "2024-11-02T12:30:12.081598Z"
     }
@@ -418,7 +408,7 @@ CREATE INDEX idx_users_metadata ON users USING gin(metadata);
 
 ### Input Sanitization
 - Search terms are cleaned and normalized
-- All input values are trimmed and/or clamped against their defaults
+- Parameter input values are trimmed and/or clamped against their defaults
 - Column names are validated against an allowlist:
   - The struct itself first;
   - Database specific table names second;
