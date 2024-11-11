@@ -349,7 +349,7 @@ Response:
 }
 ```
 
-2. ### Date interval filter combined with two other custom filters `confirmed` and `last_name` (exact match)
+2. ### Date interval filter combined with two other custom filters
 
 - Notice the `confirmed=true` and `first_name=Alex` filters.
 - For the `first_name` filter the value will be an exact match (case-sensitive).
