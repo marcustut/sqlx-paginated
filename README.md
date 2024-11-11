@@ -1,8 +1,7 @@
 # Paginated queries for SQLx
 
 [![Rust](https://github.com/alexandrughinea/sqlx-paginated/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/alexandrughinea/sqlx-paginated/actions/workflows/rust.yml)
-[![Crates.io](https://img.shields.io/crates/v/sqlx-paginate.svg)](https://crates.io/crates/sqlx-paginated)
-[![Documentation](https://docs.rs/sqlx-paginate/badge.svg)](https://docs.rs/sqlx-paginated)
+[![crates.io](https://img.shields.io/crates/v/sqlx-paginated.svg)](https://crates.io/crates/sqlx-paginated)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless pagination, searching, filtering, and sorting.
