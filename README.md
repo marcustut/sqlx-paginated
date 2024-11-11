@@ -301,7 +301,9 @@ pub struct User {
 }
 ```
 
-1. ### Combined Search, Sort, Date Interval, Pagination and Custom Filter (`confirmed` field/column name)
+1. ### Combined search, sort, date interval, pagination and custom filter
+
+- Notice the `confirmed=true` filter.
 
 Request:
 ```
@@ -347,7 +349,10 @@ Response:
 }
 ```
 
-2. ### Filtered Date Range combined with 2 (two) Custom Filters `confirmed` and `last_name` (exact match) 
+2. ### Date interval filter combined with two other custom filters `confirmed` and `last_name` (exact match)
+
+- Notice the `confirmed=true` and `first_name=Alex` filters.
+- For the `first_name` filter the value will be an exact match (case-sensitive).
 
 Request:
 ```
@@ -416,7 +421,7 @@ CREATE INDEX idx_users_metadata ON users USING gin(metadata);
 - All input values are trimmed and/or clamped against their defaults
 - Column names are validated against an allowlist:
   - The struct itself first;
-  - Database specifics second;
+  - Database specific table names second;
 - SQL injection patterns are blocked
 - System table access is prevented
 
