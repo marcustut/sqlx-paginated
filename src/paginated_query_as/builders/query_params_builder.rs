@@ -13,7 +13,7 @@ pub struct QueryParamsBuilder<'q, T> {
     query: QueryParams<'q, T>,
 }
 
-impl<'q, T: Default + Serialize> Default for QueryParamsBuilder<'q, T> {
+impl<T: Default + Serialize> Default for QueryParamsBuilder<'_, T> {
     fn default() -> Self {
         Self::new()
     }

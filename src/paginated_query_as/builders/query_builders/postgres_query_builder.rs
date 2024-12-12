@@ -5,7 +5,7 @@ use crate::QueryBuilder;
 use serde::Serialize;
 use std::marker::PhantomData;
 
-impl<'q, T> Default for QueryBuilder<'q, T, sqlx::Postgres>
+impl<T> Default for QueryBuilder<'_, T, sqlx::Postgres>
 where
     T: Default + Serialize,
 {
@@ -14,7 +14,7 @@ where
     }
 }
 
-impl<'q, T> QueryBuilder<'q, T, sqlx::Postgres>
+impl<T> QueryBuilder<'_, T, sqlx::Postgres>
 where
     T: Default + Serialize,
 {
