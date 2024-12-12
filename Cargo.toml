@@ -1,6 +1,6 @@
 [package]
 name = "sqlx-paginated"
-version = "0.2.25"
+version = "0.2.26"
 edition = "2021"
 authors = ["@alexandrughinea"]
 description = "A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless pagination, searching, filtering, and sorting."
@@ -28,8 +28,8 @@ sqlx = { version = "0.8.2", default-features = false, features = [
     "chrono",
     "json"
 ] }
-serde = { version = "1.0.214", features = ["derive"] }
-serde_json = "1.0.132"
-chrono = { version = "0.4.38", features = ["serde"] }
-tracing = "0.1.40"
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = "1.0.133"
+chrono = { version = "0.4.39", features = ["serde"] }
+tracing = "0.1.41"
 hex = "0.4.3"
