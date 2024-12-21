@@ -8,39 +8,38 @@
 A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless pagination, searching, filtering, and sorting.
 
 ## Table of Contents
-- [Paginated queries for SQLx](#paginated-queries-for-sqlx)
-    - [Features](#features)
-    - [Core Capabilities](#core-capabilities)
-    - [Technical Features](#technical-features)
-    - [Query Features](#query-features)
-  - [Database Support](#database-support)
-    - [Current vs Planned Support](#current-vs-planned-support)
-  - [Market Analysis](#market-analysis)
-    - [Ecosystem Gaps](#ecosystem-gaps)
-    - [Unique Selling Points](#unique-selling-points)
-    - [Target Audience](#target-audience)
-  - [Installation](#installation)
-  - [Quick Start](#quick-start)
-    - [Basic Usage](#basic-usage)
-    - [Response Example](#response-example)
-  - [API Reference](#api-reference)
-    - [Pagination Parameters](#pagination-parameters)
-    - [Sort Parameters](#sort-parameters)
-    - [Search Parameters](#search-parameters)
-    - [Date Range Parameters](#date-range-parameters)
-    - [Filtering Parameters](#filtering-parameters)
-  - [Query Examples](#query-examples)
-    - [Combined search, sort, date range, pagination and filter](#combined-search-sort-date-range-pagination-and-custom-filter)
-    - [Date Range combined with two other filters](#date-range-filter-combined-with-two-other-custom-filters)
-  - [Performance Considerations](#performance-considerations)
-    - [Query Pattern Optimization](#query-pattern-optimization)
-    - [Recommended Indexes](#recommended-indexes)
-    - [Pagination Performance](#pagination-performance)
-  - [Security Features](#security-features)
-    - [Input Sanitization](#input-sanitization)
-    - [Protected Patterns](#protected-patterns)
-  - [Contributing](#contributing)
-  - [License](#license)
+- [Features](#features)
+  - [Core Capabilities](#core-capabilities)
+  - [Technical Features](#technical-features)
+  - [Query Features](#query-features)
+- [Database Support](#database-support)
+  - [Current vs Planned Support](#current-vs-planned-support)
+- [Market Analysis](#market-analysis)
+  - [Ecosystem Gaps](#ecosystem-gaps)
+  - [Unique Selling Points](#unique-selling-points)
+  - [Target Audience](#target-audience)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+  - [Basic Usage](#basic-usage)
+  - [Response Example](#response-example)
+- [API Reference](#api-reference)
+  - [Pagination Parameters](#pagination-parameters)
+  - [Sort Parameters](#sort-parameters)
+  - [Search Parameters](#search-parameters)
+  - [Date Range Parameters](#date-range-parameters)
+  - [Filtering Parameters](#filtering-parameters)
+- [Query Examples](#query-examples)
+  - [Combined search, sort, date range, pagination and filter](#combined-search-sort-date-range-pagination-and-custom-filter)
+  - [Date Range combined with two other filters](#date-range-filter-combined-with-two-other-custom-filters)
+- [Performance Considerations](#performance-considerations)
+  - [Query Pattern Optimization](#query-pattern-optimization)
+  - [Recommended Indexes](#recommended-indexes)
+  - [Pagination Performance](#pagination-performance)
+- [Security Features](#security-features)
+  - [Input Sanitization](#input-sanitization)
+  - [Protected Patterns](#protected-patterns)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
@@ -67,7 +66,7 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 - Date-based filtering
 - Dynamic sort direction
 - Customizable page size
-- Result count optimization
+- Result count optimization (opt-out of total records lookup ahead)
 
 ## Database Support
 
@@ -165,7 +164,7 @@ let params = QueryParamsBuilder::<User>::new()
 Add to `Cargo.toml`:
 ```toml
 [dependencies]
-sqlx_paginated = { version = "0.1.0", features = ["postgres"] }
+sqlx_paginated = { version = "0.2.28", features = ["postgres"] }
 ```
 
 ## Quick Start
@@ -184,15 +183,19 @@ struct User {
 
 /// Macro usage example
 async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error> {
+    let params = QueryParamsBuilder::<User>::new()
+        .with_pagination(1, 10)
+        .with_sort("created_at", QuerySortDirection::Descending)
+        .with_search("replace with dynamic value", vec!["first_name", "last_name", "email"])
+        .build();
     let paginated_response = paginated_query_as!(User, "SELECT * FROM users")
         // Alternative function call example (if macros cannot be applied to your use case):
         // paginated_query_as::<User>("SELECT * FROM users")
         .with_params(params)
-        .fetch_paginated(&pool)
-        .await
-        .unwrap();
+        .fetch_paginated(pool)
+        .await?;
 
-    paginated_response
+    Ok(paginated_response)
 }
 ```
 
@@ -209,7 +212,6 @@ async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error
       "created_at": "2024-01-01T00:00:00Z"
     }
   ],
-  "total": 1,
   "page": 1,
   "page_size": 10,
   "total_pages": 1
@@ -224,7 +226,7 @@ async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error
 | page       | integer | 1       | 1   | n/a | Current page number            |
 | page_size  | integer | 10      | 10  | 50  | Number of records per page     |
 
-Example:
+#### Example:
 ```
 GET /v1/internal/users?page=2&page_size=20
 ```
@@ -235,7 +237,7 @@ GET /v1/internal/users?page=2&page_size=20
 | sort_column    | string | created_at | Any valid table column     | Column name to sort by     |
 | sort_direction | string | descending | ascending, descending      | Sort direction             |
 
-Example:
+#### Example:
 ```
 GET /v1/internal/users?sort_column=last_name&sort_direction=ascending
 ```
@@ -246,7 +248,7 @@ GET /v1/internal/users?sort_column=last_name&sort_direction=ascending
 | search         | string | null             | 100        | Search term to filter results         |
 | search_columns | string | name,description | n/a        | Comma-separated list of columns       |
 
-Example:
+#### Example:
 ```
 GET /v1/internal/users?search=john&search_columns=first_name,last_name,email
 ```
@@ -258,7 +260,7 @@ GET /v1/internal/users?search=john&search_columns=first_name,last_name,email
 | date_after  | datetime | null       | ISO 8601  | Start of date range   |
 | date_before | datetime | null       | ISO 8601  | End of date range     |
 
-Example:
+#### Example:
 ```
 GET /v1/internal/users?date_column=created_at&date_after=2024-01-01T00:00:00Z
 ```
@@ -268,7 +270,7 @@ GET /v1/internal/users?date_column=created_at&date_after=2024-01-01T00:00:00Z
 |-----------|-------------------------|-------------------|------------|-----------------------------------------|
 | *         | string,boolean,datetime | null             | 100        | Any valid table column for given struct |
 
-Example:
+#### Example:
 ```
 GET /v1/internal/users?confirmed=true
 ```
@@ -295,7 +297,7 @@ pub struct User {
 
 - Notice the `confirmed=true` filter.
 
-Request:
+#### Request:
 ```
 GET /v1/internal/users
     ?search=john
@@ -309,7 +311,7 @@ GET /v1/internal/users
     &confirmed=true
 ```
 
-Response:
+#### Response:
 ```json
 {
   "page": 1,
@@ -343,8 +345,9 @@ Response:
 
 - Notice the `confirmed=true` and `first_name=Alex` filters.
 - For the `first_name` filter the value will be an exact match (case-sensitive).
+- You can extend your struct as you please while the query parameters will also be available automatically. 
 
-Request:
+#### Request:
 ```
 GET /v1/internal/users
     ?date_before=2024-11-03T12:30:12.081598Z
@@ -353,7 +356,7 @@ GET /v1/internal/users
     &first_name=Alex
 ```
 
-Response:
+#### Response:
 ```json
 {
   "page": 1,
@@ -423,7 +426,9 @@ CREATE INDEX idx_users_metadata ON users USING gin(metadata);
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+I warmly welcome contributions from the community! 
+If you have ideas, improvements, or fixes, we encourage you to submit a Pull Request. 
+Your input is highly valued, and I'm excited to collaborate with you to make this project even better.
 
 ## License
 
