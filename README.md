@@ -1,11 +1,11 @@
-# Paginated queries for SQLx
+# sqlx-paginated
 
 [![Rust](https://github.com/alexandrughinea/sqlx-paginated/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/alexandrughinea/sqlx-paginated/actions/workflows/rust.yml)
 [![crates.io](https://img.shields.io/crates/v/sqlx-paginated.svg)](https://crates.io/crates/sqlx-paginated)
 [![docs](https://docs.rs/sqlx-paginated/badge.svg)](https://docs.rs/sqlx-paginated/latest/sqlx_paginated/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless pagination, searching, filtering, and sorting.
+A blazingly fast, type-safe, fluid query builder for dynamic APIs, offering seamless pagination, sorting and dynamic filtering on top of [SQLx](https://docs.rs/sqlx/latest/sqlx).
 
 ## Table of Contents
 - [Features](#features)
@@ -47,17 +47,17 @@ A flexible, type-safe SQLx query builder for dynamic web APIs, offering seamless
 - 🔍 Full-text search with column specification
 - 📑 Smart pagination with customizable page size
 - 🔄 Dynamic sorting on any column
-- 🎯 Flexible filtering system
+- 🎯 Flexible filtering system 
 - 📅 Date range filtering
 - 🔒 Type-safe operations
-- ⚡ High performance
+- 🔥 High performance
 - 🛡️ SQL injection protection
 
 ### Technical Features
 - Builder patterns for query parameters and query construction
 - Graceful error handling
 - Logging with tracing (if enabled)
-- Macro and function support
+- Macro and function syntax support
 
 ### Query Features
 - Case-insensitive search
@@ -149,10 +149,10 @@ let params = QueryParamsBuilder::<User>::new()
 
 ### Target Audience
 1. **Primary users**
-   - Rust web developers
-   - Teams needing secure query building
-   - Projects requiring pagination APIs
-   - SQLx users wanting higher-level abstractions
+   - Rust web developers or API teams
+   - Teams needing quick and secure query building
+   - Projects requiring pagination and dynamic filtering APIs
+   - SQLx users wanting higher-level abstractions for repetitive tasks
 
 2. **Use cases**
    - REST APIs with pagination
@@ -164,7 +164,7 @@ let params = QueryParamsBuilder::<User>::new()
 Add to `Cargo.toml`:
 ```toml
 [dependencies]
-sqlx_paginated = { version = "0.2.28", features = ["postgres"] }
+sqlx_paginated = { version = "0.2.29", features = ["postgres"] }
 ```
 
 ## Quick Start
@@ -189,7 +189,7 @@ async fn get_users(pool: &PgPool) -> Result<PaginatedResponse<User>, sqlx::Error
         .with_search("replace with dynamic value", vec!["first_name", "last_name", "email"])
         .build();
     let paginated_response = paginated_query_as!(User, "SELECT * FROM users")
-        // Alternative function call example (if macros cannot be applied to your use case):
+        // Alternative function call example (if macros don't fit your use case):
         // paginated_query_as::<User>("SELECT * FROM users")
         .with_params(params)
         .fetch_paginated(pool)
