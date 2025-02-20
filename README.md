@@ -71,11 +71,11 @@ A blazingly fast, type-safe, fluid query builder for dynamic APIs, offering seam
 ## Database Support
 
 ### Current vs Planned Support
-| Database    | Status      | Version | Features                           | Notes                           |
-|-------------|-------------|---------|-----------------------------------|---------------------------------|
-| PostgreSQL  | ✅ Supported | 12+     | All features supported            | Ready                           |
-| SQLite      | 🚧 Planned  | 3.35+   | Basic features planned           | Development starting in Q1 2025 |
-| MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap                      |
+| Database    | Status      | Version | Features                           | Notes                                       |
+|-------------|-------------|---------|-----------------------------------|---------------------------------------------|
+| PostgreSQL  | ✅ Supported | 12+     | All features supported            | Ready                                       |
+| SQLite      | 🚧 Planned  | 3.35+   | Basic features planned           | On roadmap, development starting in Q2 2025 |
+| MySQL       | 🚧 Planned  | 8.0+    | Core features planned            | On roadmap, development starting in Q3 2025 |
 
 ⚠️ Note: `This documentation covers PostgreSQL features only, as it's currently the only supported database.`
 
